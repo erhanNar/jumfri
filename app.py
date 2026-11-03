@@ -1,3 +1,10 @@
+import os
+from dotenv import load_dotenv
+
+# Önce .env dosyasını yüklüyoruz ki API anahtarını okuyabilelim
+load_dotenv()
+API_KEY = os.getenv("STRIPE_API_KEY")
+
 from datetime import datetime, timedelta
 from google import genai
 from PIL import Image
@@ -107,7 +114,7 @@ st.set_page_config(
 # ==========================================
 # 3. GEMINI API BAĞLANTISI
 # ==========================================
-API_KEY = "AQ.Ab8RN6J8xIsGY3rfXybEf8xqe-ZHGxTwn9U9usvI9yDbcFtIxQ"
+
 
 try:
   client = genai.Client(api_key=API_KEY)

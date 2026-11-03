@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>jumfri - Şifresiz Giriş</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light d-flex align-items-center justify-content-center" style="height: 100vh;">
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5">
+                <div class="card shadow-sm border-0 rounded-4 p-4">
+                    <h3 class="fw-bold text-primary text-center mb-2">jumfri</h3>
+                    <p class="text-muted text-center small mb-4">Schengen Gün Hesaplama Sistemi</p>
+
+                    <div id="hata-kutusu" class="alert alert-danger py-2 small d-none" role="alert"></div>
+
+                    <!-- 1. Adım: E-posta Giriş Alanı -->
+                    <div id="adim-email">
+                        <div class="mb-3">
+                            <label for="email" class="form-label small text-muted">E-posta Adresiniz</label>
+                            <input type="email" id="email" class="form-control" placeholder="ornek@mail.com" required>
+                        </div>
+                        <div class="d-grid">
+                            <button type="button" id="btnKodGonder" class="btn btn-primary fw-semibold py-2">Giriş Kodunu Gönder</button>
+                        </div>
+                    </div>
+
+                    <!-- 2. Adım: OTP Kod ve Oturum Süresi Alanı (Başta Gizli) -->
+                    <div id="adim-otp" class="d-none">
+                        <div class="mb-3">
+                            <label for="otp_kod" class="form-label small text-muted">E-postanıza Gelen 6 Haneli Kod</label>
+                            <input type="text" id="otp_kod" class="form-control text-center fw-bold fs-3 tracking-widest" maxlength="6" placeholder="------">
+                        </div>
+
+                        <!-- Oturum Açık Kalma Süresi Seçenekleri -->
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Oturum Açık Kalma Süresi</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="oturum_suresi" id="sure1" value="1" checked>
+                                <label class="btn btn-outline-primary btn-sm" for="sure1">1 Saat</label>
+
+                                <input type="radio" class="btn-check" name="oturum_suresi" id="sure4" value="4">
+                                <label class="btn btn-outline-primary btn-sm" for="sure4">4 Saat</label>
+
+                                <input type="radio" class="btn-check" name="oturum_suresi" id="sure24" value="24">
+                                <label class="btn btn-outline-primary btn-sm" for="sure24">24 Saat</label>
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="button" id="btnKodDogrula" class="btn btn-success fw-semibold py-2">Kodu Doğrula ve Giriş Yap</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const HEDEF_URL = window.location.pathname;
+
+        // 1. Aşama: E-posta ile Kod İste
+        document.getElementById('btnKodGonder').addEventListener('click', function() {
+            var email = document.getElementById('email').value;
+            var hataKutusu = document.getElementById('hata-kutusu');
+
+            if (!email) {
+                hataKutusu.textContent = "Lütfen e-posta adresinizi girin.";
+                hataKutusu.classList.remove('d-none');
+                return;
+            }
+
+            var formData = new FormData();
+            formData.append('islem', 'pin_kontrol');
+            formData.append('email', email);
+
+            var xmlhttp = new XMLHttpRequest();
+            xmlhttp.onreadystatechange = function() {
+                if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                    var response = JSON.parse(xmlhttp.responseText);
+                    if (response.status === 'otp_gonderildi') {
+                        hataKutusu.classList.add('d-none');
+                        document.getElementById('adim-email').classList.add('d-none');
+                        document.getElementById('adim-otp').classList.remove('d-none');
+                    } else {
+                        hataKutusu.textContent = response.mesaj || "Bir hata oluştu.";
+                        hataKutusu.classList.remove('d-none');
+                    }
+                }
+            };
+            xmlhttp.open("POST", HEDEF_URL, true);
+            xmlhttp.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+            xmlhttp.send(formData);
+        });
+
+        // 2. Aşama: OTP Kodu Doğrula ve Süre Seçimini Gönder
+        document.getElementById('btnKodDogrula').addEventListener('click', function() {
+            var email = document.getElementById('email').value;
+            var otpKod = document.getElementById('otp_kod').value;
+            var oturumSuresi = document.querySelector('input[name="oturum_suresi"]:checked').value;
+            var hataKutusu = document.getElementById('hata-kutusu');
+
+            var formData = new FormData();
+            formData.append('islem', 'otp_dogrula');
+            formData.append('email', email);
+            formData.append('otp_kod', otpKod);
+            formData.append('oturum_suresi', oturumSuresi);
+
+            var xmlhttp = new XMLHttpRequest();
+            xmlhttp.onreadystatechange = function() {
+                if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                    var response = JSON.parse(xmlhttp.responseText);
+                    if (response.status === 'basarili') {
+                        window.location.href = response.yonlendir; // /hesapla/ sayfasına git
+                    } else {
+                        hataKutusu.textContent = response.mesaj || "Geçersiz kod.";
+                        hataKutusu.classList.remove('d-none');
+                    }
+                }
+            };
+            xmlhttp.open("POST", HEDEF_URL, true);
+            xmlhttp.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+            xmlhttp.send(formData);
+        });
+    </script>
+</body>
+</html>
